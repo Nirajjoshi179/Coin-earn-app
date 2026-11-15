@@ -1,0 +1,527 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>Coin Earn</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#f6f6fa;color:#202124;padding-bottom:85px}
+button,input,select{font-family:inherit}
+button{cursor:pointer}
+header{height:65px;background:#fff;padding:0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #eee}
+.logo{display:flex;align-items:center;gap:9px;font-size:21px;font-weight:bold;color:#6855df}
+.logo svg{width:27px;height:27px}
+.container{max-width:500px;margin:auto;padding:16px}
+.page{display:none}
+.page.active{display:block}
+.balance{background:linear-gradient(135deg,#6654df,#9887ff);padding:24px;border-radius:21px;color:white;margin-top:12px}
+.balance small{opacity:.8}
+.amount{font-size:36px;font-weight:bold;margin:13px 0}
+.btn-white{background:white;color:#6654df;border:0;padding:12px 18px;border-radius:11px;font-weight:bold}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:15px}
+.stat{background:white;padding:17px;border-radius:16px}
+.stat small{color:#888}
+.stat b{display:block;font-size:23px;margin-top:9px}
+.section{margin-top:26px}
+.section h3{font-size:18px;margin-bottom:15px}
+.card{background:white;padding:16px;border-radius:17px;display:flex;align-items:center;gap:13px;margin-bottom:12px}
+.icon{height:48px;width:48px;flex-shrink:0;border-radius:14px;background:#f0edff;color:#6855df;display:grid;place-items:center}
+.icon svg{width:24px;height:24px}
+.info{flex:1}
+.info b{font-size:15px}
+.info p{font-size:12px;color:#888;margin-top:6px}
+.btn{background:#6855df;color:white;border:0;border-radius:10px;padding:11px 14px;font-weight:bold}
+.reward-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.reward{background:white;padding:17px;border-radius:17px}
+.reward-icon{height:55px;width:55px;border-radius:15px;background:#f0edff;color:#6855df;display:grid;place-items:center;margin-bottom:14px}
+.reward-icon svg{width:29px;height:29px}
+.reward p{font-size:12px;color:#888;margin:8px 0 14px}
+.reward button{width:100%}
+.history{background:white;border-radius:16px;padding:15px}
+.history-item{display:flex;justify-content:space-between;align-items:center;padding:15px 0;border-bottom:1px solid #eee;font-size:14px;gap:10px}
+.plus{color:#18a36c}
+.minus{color:#e05252}
+.upload{background:white;padding:18px;border-radius:17px}
+.upload input{width:100%;margin:14px 0}
+#preview{max-width:100%;max-height:220px;border-radius:12px;display:none;margin-top:12px}
+.field{width:100%;padding:13px;border:1px solid #e4e4e9;border-radius:11px;margin:10px 0;outline:none;background:white}
+.convert-btn{width:100%;padding:14px;margin-top:15px}
+nav{position:fixed;bottom:0;left:0;width:100%;background:white;display:flex;justify-content:space-around;padding:11px 4px;border-top:1px solid #eee;z-index:5}
+nav button{background:none;border:0;color:#92929b;font-size:11px;min-width:60px}
+nav svg{width:22px;height:22px;display:block;margin:0 auto 5px}
+nav button.active{color:#6855df;font-weight:bold}
+.auth{max-width:390px;margin:65px auto;background:white;padding:25px;border-radius:21px}
+.auth h2{text-align:center;margin-bottom:9px}
+.auth p{text-align:center;color:#888;font-size:13px;margin-bottom:23px}
+.auth .field{margin-bottom:13px}
+.auth .btn{width:100%;padding:14px;margin-top:5px}
+.switch{text-align:center;margin-top:19px;font-size:13px;color:#6855df;cursor:pointer}
+#message{text-align:center;font-size:13px;color:#e05252;margin-top:13px}
+#app{display:none}
+.profilebox{background:white;padding:23px;border-radius:17px;text-align:center}
+.avatar{height:65px;width:65px;margin:0 auto 15px;border-radius:50%;background:#f0edff;color:#6855df;display:grid;place-items:center}
+.avatar svg{width:32px;height:32px}
+.muted{color:#888;font-size:13px}
+</style>
+</head>
+
+<body>
+
+<div id="authScreen">
+<div class="auth">
+<h2 id="authTitle">Welcome Back</h2>
+<p id="authDesc">Login to your Coin Earn account</p>
+
+<input class="field" id="email" type="email" placeholder="Email Address">
+<input class="field" id="password" type="password" placeholder="Password">
+
+<button class="btn" id="authButton" onclick="authenticate()">Login</button>
+<div class="switch" id="switchText" onclick="toggleAuth()">Don't have an account? Sign Up</div>
+<div id="message"></div>
+</div>
+</div>
+
+<div id="app">
+
+<header>
+<div class="logo"><i data-lucide="coins"></i> Coin Earn</div>
+<i data-lucide="user-round"></i>
+</header>
+
+<div class="container">
+
+<section id="home" class="page active">
+
+<div class="balance">
+<small>Your Total Balance</small>
+<div class="amount"><span id="coins">0</span> Coins</div>
+<button class="btn-white" onclick="showPage('rewards')">Explore Rewards →</button>
+</div>
+
+<div class="stats">
+<div class="stat"><small>Today's Earnings</small><b id="today">0</b></div>
+<div class="stat"><small>Total Rewards</small><b id="total">0</b></div>
+</div>
+
+<div class="section">
+<h3>Earn Coins</h3>
+
+<div class="card">
+<div class="icon"><i data-lucide="play-circle"></i></div>
+<div class="info"><b>Watch Video Ad</b><p>Watch an ad and earn 10 coins</p></div>
+<button class="btn" onclick="watchAd()">+10</button>
+</div>
+
+<div class="card">
+<div class="icon"><i data-lucide="calendar-check"></i></div>
+<div class="info"><b>Daily Bonus</b><p>Get your daily bonus</p></div>
+<button class="btn" onclick="dailyBonus()">Claim</button>
+</div>
+</div>
+
+<div class="section">
+<h3>Image Converter</h3>
+
+<div class="upload">
+<p class="muted">Convert JPG, JPEG, PNG and WEBP images</p>
+
+<input
+type="file"
+id="imageInput"
+accept="image/png,image/jpeg,image/webp"
+onchange="previewImage(event)"
+>
+
+<img id="preview" alt="Image Preview">
+
+<label style="display:block;margin-top:16px;font-size:14px;font-weight:bold">
+Select Output Format
+</label>
+
+<select id="outputFormat" class="field">
+<option value="image/png">PNG</option>
+<option value="image/jpeg">JPG</option>
+<option value="image/webp">WEBP</option>
+</select>
+
+<button class="btn convert-btn" id="convertBtn" onclick="convertImage()" disabled>
+<i data-lucide="download"></i> Convert & Download
+</button>
+
+<p class="muted" id="imageInfo" style="margin-top:12px"></p>
+</div>
+</div>
+
+</section>
+
+<section id="rewards" class="page">
+<div class="section">
+<h3>Rewards Store</h3>
+<div class="reward-grid">
+
+<div class="reward">
+<div class="reward-icon"><i data-lucide="palette"></i></div>
+<b>Premium Theme</b><p>100 Coins</p>
+<button class="btn" onclick="buy(100,'Premium Theme')">Unlock</button>
+</div>
+
+<div class="reward">
+<div class="reward-icon"><i data-lucide="ban"></i></div>
+<b>Remove Ads</b><p>500 Coins</p>
+<button class="btn" onclick="buy(500,'Remove Ads')">Unlock</button>
+</div>
+
+<div class="reward">
+<div class="reward-icon"><i data-lucide="crown"></i></div>
+<b>VIP Badge</b><p>1000 Coins</p>
+<button class="btn" onclick="buy(1000,'VIP Badge')">Unlock</button>
+</div>
+
+<div class="reward">
+<div class="reward-icon"><i data-lucide="star"></i></div>
+<b>Premium Feature</b><p>2000 Coins</p>
+<button class="btn" onclick="buy(2000,'Premium Feature')">Unlock</button>
+</div>
+
+</div>
+</div>
+</section>
+
+<section id="history" class="page">
+<div class="section">
+<h3>Transaction History</h3>
+<div class="history" id="historyList"><p class="muted">Loading...</p></div>
+</div>
+</section>
+
+<section id="profile" class="page">
+<div class="section">
+<h3>My Profile</h3>
+<div class="profilebox">
+<div class="avatar"><i data-lucide="user-round"></i></div>
+<b id="userEmail">User</b>
+<p class="muted" style="margin-top:8px">Coin Earn Member</p>
+<h2 style="margin:20px 0" id="profileCoins">0 Coins</h2>
+<button class="btn" onclick="logout()">Logout</button>
+</div>
+</div>
+</section>
+
+</div>
+
+<nav>
+<button class="active" onclick="showPage('home',this)"><i data-lucide="house"></i>Home</button>
+<button onclick="showPage('rewards',this)"><i data-lucide="gift"></i>Rewards</button>
+<button onclick="showPage('history',this)"><i data-lucide="history"></i>History</button>
+<button onclick="showPage('profile',this)"><i data-lucide="user-round"></i>Profile</button>
+</nav>
+
+</div>
+
+<script>
+const SUPABASE_URL="https://wgylobjcxqmjsutgdhdz.supabase.co";
+const SUPABASE_KEY="sb_publishable_IfpDVaKbbxem461SnCl9UA_LFwdNOon";
+
+const db=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+let isSignup=false;
+let currentUser=null;
+let balance=0;
+let transactions=[];
+let selectedImage=null;
+let previewURL=null;
+
+function icons(){
+if(window.lucide)lucide.createIcons();
+}
+
+function msg(text){
+document.getElementById("message").textContent=text;
+}
+
+function toggleAuth(){
+isSignup=!isSignup;
+document.getElementById("authTitle").textContent=isSignup?"Create Account":"Welcome Back";
+document.getElementById("authDesc").textContent=isSignup?"Create your Coin Earn account":"Login to your Coin Earn account";
+document.getElementById("authButton").textContent=isSignup?"Sign Up":"Login";
+document.getElementById("switchText").textContent=isSignup?"Already have an account? Login":"Don't have an account? Sign Up";
+msg("");
+}
+
+async function authenticate(){
+const email=document.getElementById("email").value.trim();
+const password=document.getElementById("password").value;
+const button=document.getElementById("authButton");
+
+if(!email||!password)return msg("Enter email and password");
+if(password.length<6)return msg("Password must be at least 6 characters");
+
+button.disabled=true;
+button.textContent="Please wait...";
+
+try{
+let result;
+
+if(isSignup){
+result=await db.auth.signUp({email,password});
+}else{
+result=await db.auth.signInWithPassword({email,password});
+}
+
+if(result.error)throw result.error;
+
+if(isSignup&&!result.data.session){
+msg("Signup successful! Please verify your email.");
+}else if(result.data.session){
+await openApp(result.data.user);
+}
+}catch(error){
+msg(error.message);
+}finally{
+button.disabled=false;
+button.textContent=isSignup?"Sign Up":"Login";
+}
+}
+
+async function openApp(user){
+currentUser=user;
+document.getElementById("authScreen").style.display="none";
+document.getElementById("app").style.display="block";
+document.getElementById("userEmail").textContent=user.email||"User";
+await loadWallet();
+icons();
+}
+
+async function loadWallet(){
+if(!currentUser)return;
+
+const {data:wallet,error}=await db.from("coin_wallets")
+.select("balance").eq("user_id",currentUser.id).maybeSingle();
+
+if(error){
+alert(error.message);
+return;
+}
+
+if(!wallet){
+alert("Wallet not found. Please check the wallet trigger in Supabase.");
+return;
+}
+
+balance=Number(wallet.balance);
+document.getElementById("coins").textContent=balance;
+document.getElementById("profileCoins").textContent=balance+" Coins";
+
+const {data,error:historyError}=await db.from("coin_transactions")
+.select("amount,description,created_at")
+.eq("user_id",currentUser.id)
+.order("created_at",{ascending:false}).limit(50);
+
+if(historyError){
+alert(historyError.message);
+return;
+}
+
+transactions=data||[];
+renderHistory();
+
+const start=new Date();
+start.setHours(0,0,0,0);
+
+const earned=transactions.filter(t=>new Date(t.created_at)>=start&&Number(t.amount)>0)
+.reduce((sum,t)=>sum+Number(t.amount),0);
+
+document.getElementById("today").textContent=earned;
+
+document.getElementById("total").textContent=transactions
+.filter(t=>Number(t.amount)>0)
+.reduce((sum,t)=>sum+Number(t.amount),0);
+}
+
+function renderHistory(){
+const box=document.getElementById("historyList");
+
+if(!transactions.length){
+box.innerHTML='<p class="muted">No transactions yet.</p>';
+return;
+}
+
+box.innerHTML=transactions.map(t=>{
+const amount=Number(t.amount);
+return `<div class="history-item">
+<span>${escapeHTML(t.description)}</span>
+<b class="${amount>=0?'plus':'minus'}">${amount>0?'+':''}${amount} Coins</b>
+</div>`;
+}).join("");
+}
+
+function escapeHTML(text){
+return String(text).replace(/[&<>"']/g,c=>({
+'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+}[c]));
+}
+
+function watchAd(){
+if(window.Android&&typeof window.Android.showRewardedAd==="function"){
+window.Android.showRewardedAd();
+}else{
+alert("Unity Rewarded Ads अभी APK में connect नहीं हैं।");
+}
+}
+
+function dailyBonus(){
+alert("Daily Bonus को secure Supabase backend से connect करना बाकी है।");
+}
+
+function buy(price,name){
+alert("Reward purchase backend अभी connect करना बाकी है।");
+}
+
+function previewImage(event){
+const file=event.target.files[0];
+if(!file)return;
+
+const allowed=["image/png","image/jpeg","image/webp"];
+
+if(!allowed.includes(file.type)){
+alert("Only JPG, JPEG, PNG and WEBP images are supported.");
+event.target.value="";
+return;
+}
+
+if(file.size>5*1024*1024){
+alert("Image must be under 5 MB.");
+event.target.value="";
+return;
+}
+
+selectedImage=file;
+
+if(previewURL)URL.revokeObjectURL(previewURL);
+
+previewURL=URL.createObjectURL(file);
+
+const img=document.getElementById("preview");
+img.src=previewURL;
+img.style.display="block";
+
+document.getElementById("convertBtn").disabled=false;
+
+document.getElementById("imageInfo").textContent=
+"Selected: "+file.name+" ("+(file.size/1024).toFixed(1)+" KB)";
+
+icons();
+}
+
+function convertImage(){
+if(!selectedImage){
+alert("Please select an image first.");
+return;
+}
+
+const format=document.getElementById("outputFormat").value;
+const img=new Image();
+const sourceURL=URL.createObjectURL(selectedImage);
+
+img.onload=function(){
+const canvas=document.createElement("canvas");
+canvas.width=img.naturalWidth;
+canvas.height=img.naturalHeight;
+
+const ctx=canvas.getContext("2d");
+
+if(format==="image/jpeg"){
+ctx.fillStyle="#ffffff";
+ctx.fillRect(0,0,canvas.width,canvas.height);
+}
+
+ctx.drawImage(img,0,0);
+
+canvas.toBlob(function(blob){
+URL.revokeObjectURL(sourceURL);
+
+if(!blob){
+alert("Image conversion failed!");
+return;
+}
+
+const extensions={
+"image/png":"png",
+"image/jpeg":"jpg",
+"image/webp":"webp"
+};
+
+const baseName=selectedImage.name.replace(/\.[^/.]+$/,"");
+const url=URL.createObjectURL(blob);
+const link=document.createElement("a");
+
+link.href=url;
+link.download=baseName+"."+extensions[format];
+
+document.body.appendChild(link);
+link.click();
+link.remove();
+
+setTimeout(()=>URL.revokeObjectURL(url),1500);
+
+document.getElementById("imageInfo").textContent=
+"Conversion complete! Output size: "+(blob.size/1024).toFixed(1)+" KB";
+
+},format,format==="image/png"?undefined:0.9);
+};
+
+img.onerror=function(){
+URL.revokeObjectURL(sourceURL);
+alert("Unable to load image.");
+};
+
+img.src=sourceURL;
+}
+
+function showPage(id,button){
+document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+document.getElementById(id).classList.add("active");
+
+document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+
+if(button){
+button.classList.add("active");
+}else{
+const index=["home","rewards","history","profile"].indexOf(id);
+document.querySelectorAll("nav button")[index].classList.add("active");
+}
+}
+
+async function logout(){
+await db.auth.signOut();
+currentUser=null;
+document.getElementById("app").style.display="none";
+document.getElementById("authScreen").style.display="block";
+document.getElementById("password").value="";
+showPage("home");
+}
+
+db.auth.onAuthStateChange((event,session)=>{
+if(event==="SIGNED_OUT"){
+document.getElementById("app").style.display="none";
+document.getElementById("authScreen").style.display="block";
+}
+});
+
+icons();
+
+(async()=>{
+const {data:{session}}=await db.auth.getSession();
+if(session)await openApp(session.user);
+})();
+</script>
+
+</body>
+</html>
